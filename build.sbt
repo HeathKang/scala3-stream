@@ -10,7 +10,8 @@ lazy val root = project
     libraryDependencies ++= Seq(
       "com.typesafe.akka" % "akka-stream_2.13"  % AkkaVersion,
       "com.novocode" % "junit-interface" % "0.11" % "test",
-      "com.lightbend.akka" % "akka-stream-alpakka-mqtt_2.13" % "3.0.1" 
+      "com.lightbend.akka" % "akka-stream-alpakka-mqtt_2.13" % "3.0.1",
+      "org.json4s" % "json4s-native_2.13" % "4.0.0"
     )
   )
 

@@ -5,6 +5,9 @@ import akka.actor.ActorSystem
 import org.heathkang.scala3_stream.mqttSource.mqttSource
 import akka.stream.alpakka.mqtt.MqttMessage
 import scala.concurrent.Future
+import org.json4s
+import org.json4s.native.JsonMethods._
+import org.json4s.JValue
 
 
 @main def hello: Unit = 
@@ -20,10 +23,10 @@ def msg = "I was compiled by Scala 3. :)"
 def createSource: Source[Int, NotUsed] = 
   Source(1 to 10)
 
-def createFlow: Flow[MqttMessage, String, NotUsed] = 
+def createFlow: Flow[MqttMessage, JValue, NotUsed] = 
   Flow[MqttMessage].map(
-    mqttMessage => mqttMessage.payload.utf8String
+    mqttMessage => parse(mqttMessage.payload.utf8String)
   )
 
-def toSink: Sink[String, Future[Done]] =
-  Sink.foreach(s => println(s))
+def toSink: Sink[JValue, Future[Done]] =
+  Sink.foreach(s => println(compact(render(s))))
