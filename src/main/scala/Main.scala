@@ -5,14 +5,14 @@ import akka.actor.ActorSystem
 import org.heathkang.scala3_stream.mqttSource.mqttSource
 import akka.stream.alpakka.mqtt.MqttMessage
 import scala.concurrent.Future
+import zio.{ Has, Layer, Managed, Task, ZLayer }
+import com.github.ekeith.zio.akkastream.Converters.runnableGraphAsZioEffect
 import org.json4s
 import org.json4s.native.JsonMethods._
 import org.json4s.JValue
 
 
 @main def hello: Unit = 
-  println("Hello world!")
-  println(msg)
   given ActorSystem = ActorSystem("Stream-Start")
   createSource.runForeach(i => println(i))
   val runGraph: RunnableGraph[Future[Done]] = mqttSource.mqttSource.via(createFlow).toMat(toSink)(Keep.right)
