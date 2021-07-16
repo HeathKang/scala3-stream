@@ -5,11 +5,9 @@ import akka.actor.ActorSystem
 import org.heathkang.scala3_stream.mqttSource.mqttSource
 import akka.stream.alpakka.mqtt.MqttMessage
 import scala.concurrent.Future
-import zio._
-import com.github.ekeith.zio.akkastream.Converters.runnableGraphAsZioEffect
-import org.json4s
-import org.json4s.native.JsonMethods._
-import org.json4s.JValue
+import zio.{ZIO,Has, ZLayer, Layer, Runtime, Managed, Task}
+import io.circe._
+import io.circe.parser._
 
 object MyApp extends zio.App {
   // given ActorSystem = ActorSystem("Stream-Start")
@@ -20,9 +18,15 @@ object MyApp extends zio.App {
     val runGraph: RunnableGraph[Future[Done]] = mqttSource.mqttSource.via(createFlow).toMat(toSink)(Keep.right)
     
     (for {
-        materialisedValue <- runnableGraphAsZioEffect(runGraph).provideLayer(materializerLayer)
+        materialisedValue <- runAkkaStreamGraphEffect(runGraph).provideLayer(materializerLayer)
     } yield materialisedValue).exitCode
-  // runGraph.run()
+
+  def runAkkaStreamGraphEffect[M](runGraph: RunnableGraph[Future[M]]): ZIO[Has[Materializer], Throwable, M] =
+    for {
+      mat <- ZIO.access[Has[Materializer]](_.get)
+      materialisedFuture <- ZIO.effect(runGraph.run()(mat))
+      materialisedValue <- ZIO.fromFuture(_ => materialisedFuture)
+    } yield materialisedValue
 
   val actorSystem: Layer[Throwable, Has[ActorSystem]] = 
     ZLayer.fromManaged(Managed.make(Task(ActorSystem("Stream-start")))
@@ -31,12 +35,12 @@ object MyApp extends zio.App {
   val materializerLayer: Layer[Throwable, Has[Materializer]] = 
     actorSystem >>> ZLayer.fromFunction(as => Materializer(as.get))
 
-  def createFlow: Flow[MqttMessage, JValue, NotUsed] = 
+  def createFlow: Flow[MqttMessage, Json, NotUsed] = 
     Flow[MqttMessage].map(
-      mqttMessage => parse(mqttMessage.payload.utf8String)
+      mqttMessage => parse(mqttMessage.payload.utf8String).getOrElse(Json.Null)
     )
 
-  def toSink: Sink[JValue, Future[Done]] =
-    Sink.foreach(s => println(compact(render(s))))
+  def toSink: Sink[Json, Future[Done]] =
+    Sink.foreach(s => println(s))
 
 }

@@ -1,0 +1,67 @@
+package org.heathkang.domain
+
+import zio.json._
+
+
+case class OperationalData(
+  @jsonField("@Name") name: String,
+  @jsonField("AlarmStop") alarmStop: String,
+  @jsonField("AxisActMeas") axisActMeas: AxisActMeas,
+  @jsonField("BrakeSig") brakeSig: String,
+  @jsonField("CurrAct") currAct: CurrAct,
+  @jsonField("FolError") folError: FolError,
+  @jsonField("Load_C") load_c: Load_C,
+
+  ) 
+
+case class AxisActMeas(
+  @jsonField("E6AXIS") e6axis: E6AXIS
+)
+
+case class E6AXIS(
+  @jsonField("A1") a1: String,
+  @jsonField("A2") a2: String,
+  @jsonField("A3") a3: String,
+  @jsonField("A4") a4: String,
+  @jsonField("A5") a5: String,
+  @jsonField("A6") a6: String,
+  @jsonField("E1") e1: String,
+  @jsonField("E2") e2: String,
+  @jsonField("E3") e3: String,
+  @jsonField("E4") e4: String,
+  @jsonField("E5") e5: String,
+  @jsonField("E6") e6: String
+)
+
+case class CurrAct(
+  @jsonField("REAL") real: List[String]
+)
+
+case class FolError(
+  @jsonField("REAL") real: List[String]
+)
+
+case class Load_C(
+  @jsonField("LOAD") load: LOAD
+)
+
+case class LOAD(
+  @jsonField("M") m: String,
+  @jsonField("CM") cm: CM,
+  @jsonField("J") j: J
+)
+
+case class CM(
+  @jsonField("X") x: String,
+  @jsonField("Y") y: String,
+  @jsonField("Z") z: String,
+  @jsonField("A") a: String,
+  @jsonField("B") b: String,
+  @jsonField("C") c: String
+)
+
+case class J(
+  @jsonField("X") x: String,
+  @jsonField("Y") y: String,
+  @jsonField("Z") z: String
+)
