@@ -13,9 +13,9 @@ object mqttSource {
   val topic = "sites/virtual-factory/devices/VF3000/operational-data"
   val connectionSettings = MqttConnectionSettings(
     "tcp://127.0.0.1:11883",
-    "test-scala-client",
+    "test-scala-client1",
     new MemoryPersistence
-    )
+    ).withAutomaticReconnect(true)
   
   val mqttSource: Source[MqttMessage, Future[Done]] = 
     MqttSource.atMostOnce(

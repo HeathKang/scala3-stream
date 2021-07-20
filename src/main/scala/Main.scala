@@ -1,3 +1,4 @@
+import scala.collection.immutable
 import akka.stream._
 import akka.stream.scaladsl._
 import akka.{NotUsed, Done}
@@ -5,9 +6,12 @@ import akka.actor.ActorSystem
 import org.heathkang.scala3_stream.mqttSource.mqttSource
 import akka.stream.alpakka.mqtt.MqttMessage
 import scala.concurrent.Future
-import zio.{ZIO,Has, ZLayer, Layer, Runtime, Managed, Task}
 import io.circe._
 import io.circe.parser._
+import zio._
+import zio.console._
+import zio.duration.durationInt
+
 
 object MyApp extends zio.App {
   // given ActorSystem = ActorSystem("Stream-Start")
@@ -15,17 +19,26 @@ object MyApp extends zio.App {
   def run(args: List[String]) = 
     val runtime = Runtime.default
   
-    val runGraph: RunnableGraph[Future[Done]] = mqttSource.mqttSource.via(createFlow).toMat(toSink)(Keep.right)
+    val runGraph: RunnableGraph[SinkQueueWithCancel[Json]] = mqttSource.mqttSource.via(createFlow).toMat(toSink)(Keep.right)
     
     (for {
-        materialisedValue <- runAkkaStreamGraphEffect(runGraph).provideLayer(materializerLayer)
-    } yield materialisedValue).exitCode
+        materialisedValue <- runAkkaStreamGraphEffect(runGraph).provideLayer(materializerLayer).fork
+                _                     <- ZIO.sleep(10.seconds)
+        valueFuture             <- materialisedValue.join
+        value                  <- ZIO.fromFuture( _ => valueFuture.pull )
 
-  def runAkkaStreamGraphEffect[M](runGraph: RunnableGraph[Future[M]]): ZIO[Has[Materializer], Throwable, M] =
+        _                     <- putStrLn( value.toString)
+    } yield ()).exitCode
+  
+  // def fromFutureToTask(future: Future[immutable.Seq[Json]]): UIO[Task[immutable.Seq[Json]]] = 
+  //   ZIO.fromFuture { 
+  //   }
+  
+  def runAkkaStreamGraphEffect[M](runGraph: RunnableGraph[M]): ZIO[Has[Materializer], Throwable, M] =
     for {
       mat <- ZIO.access[Has[Materializer]](_.get)
-      materialisedFuture <- ZIO.effect(runGraph.run()(mat))
-      materialisedValue <- ZIO.fromFuture(_ => materialisedFuture)
+      materialisedValue <- ZIO.effectAsync(runGraph.run()(mat))
+      // materialisedValue <- ZIO.fromFuture(_ => materialisedFuture)
     } yield materialisedValue
 
   val actorSystem: Layer[Throwable, Has[ActorSystem]] = 
@@ -40,7 +53,7 @@ object MyApp extends zio.App {
       mqttMessage => parse(mqttMessage.payload.utf8String).getOrElse(Json.Null)
     )
 
-  def toSink: Sink[Json, Future[Done]] =
-    Sink.foreach(s => println(s))
+  def toSink: Sink[Json, SinkQueueWithCancel[Json]] =
+    Sink.queue
 
 }
